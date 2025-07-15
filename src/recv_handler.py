@@ -39,6 +39,7 @@ class RecvHandler:
     def __init__(self):
         self.server_connection: Server.ServerConnection = None
         self.interval = global_config.napcat_heartbeat_interval
+        self.maibot_connected = False  # 新增：MaiBot 连接状态
 
     async def handle_meta_event(self, message: dict) -> None:
         event_type = message.get("meta_event_type")
@@ -48,6 +49,7 @@ class RecvHandler:
                 self_id = message.get("self_id")
                 self.last_heart_beat = time.time()
                 logger.info(f"Bot {self_id} 连接成功")
+                self.maibot_connected = True
                 asyncio.create_task(self.check_heartbeat(self_id))
         elif event_type == MetaEventType.heartbeat:
             if message["status"].get("online") and message["status"].get("good"):
@@ -62,6 +64,7 @@ class RecvHandler:
             now_time = time.time()
             if now_time - self.last_heart_beat > self.interval + 3:
                 logger.warning(f"Bot {id} 连接已断开")
+                self.maibot_connected = False
                 break
             else:
                 logger.debug("心跳正常")
@@ -796,6 +799,7 @@ class RecvHandler:
         except Exception as e:
             logger.error(f"发送消息失败: {str(e)}")
             logger.error("请检查与MaiBot之间的连接")
+            self.maibot_connected = False
             return None
 
 
@@ -803,15 +807,12 @@ recv_handler = RecvHandler()
 
 health_reporter = FastAPI()
 
-
 @health_reporter.get("/health")
 def health_check():
-    handler = recv_handler
-    now_time = time.time()
-    if hasattr(handler, "last_heart_beat") and hasattr(handler, "interval"):
-        if now_time - handler.last_heart_beat > handler.interval + 3:
-            return JSONResponse(status_code=503, content={"status": "disconnected"})
-        else:
-            return {"status": "ok"}
+    if recv_handler.maibot_connected:
+        return {"status": "ok"}
     else:
-        return JSONResponse(status_code=503, content={"status": "not initialized"})
+        return JSONResponse(
+            status_code=503,
+            content={"status": "disconnected", "reason": "MaiBot connection failed"},
+        )
