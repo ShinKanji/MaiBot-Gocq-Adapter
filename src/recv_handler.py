@@ -7,6 +7,8 @@ import json
 import websockets as Server
 from typing import List, Tuple, Optional, Dict, Any
 import uuid
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse
 
 from . import MetaEventType, RealMessageType, MessageType, NoticeType
 from maim_message import (
@@ -798,3 +800,18 @@ class RecvHandler:
 
 
 recv_handler = RecvHandler()
+
+app = FastAPI()
+
+
+@app.get("/health")
+def health_check():
+    handler = recv_handler
+    now_time = time.time()
+    if hasattr(handler, "last_heart_beat") and hasattr(handler, "interval"):
+        if now_time - handler.last_heart_beat > handler.interval + 3:
+            return JSONResponse(status_code=503, content={"status": "disconnected"})
+        else:
+            return {"status": "ok"}
+    else:
+        return JSONResponse(status_code=503, content={"status": "not initialized"})

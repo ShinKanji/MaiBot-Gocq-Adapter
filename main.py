@@ -64,6 +64,9 @@ async def graceful_shutdown():
 
 
 if __name__ == "__main__":
+    import uvicorn
+    from src.recv_handler import app
+    uvicorn.run(app, host="0.0.0.0", port=80)
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
