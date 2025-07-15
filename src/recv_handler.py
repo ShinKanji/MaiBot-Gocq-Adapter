@@ -801,10 +801,10 @@ class RecvHandler:
 
 recv_handler = RecvHandler()
 
-app = FastAPI()
+health_reporter = FastAPI()
 
 
-@app.get("/health")
+@health_reporter.get("/health")
 def health_check():
     handler = recv_handler
     now_time = time.time()

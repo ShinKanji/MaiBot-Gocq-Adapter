@@ -3,7 +3,7 @@ import sys
 import json
 import websockets as Server
 from src.logger import logger
-from src.recv_handler import recv_handler
+from src.recv_handler import recv_handler, health_reporter
 from src.send_handler import send_handler
 from src.config import global_config
 from src.mmc_com_layer import mmc_start_com, mmc_stop_com, router
@@ -41,7 +41,13 @@ async def message_process():
 
 async def main():
     recv_handler.maibot_router = router
-    _ = await asyncio.gather(napcat_server(), mmc_start_com(), message_process(), check_timeout_response())
+    _ = await asyncio.gather(
+        napcat_server(),
+        mmc_start_com(),
+        message_process(),
+        check_timeout_response(),
+        start_health_reporter()  # 新增异步健康服务
+    )
 
 
 async def napcat_server():
@@ -49,6 +55,13 @@ async def napcat_server():
     async with Server.serve(message_recv, global_config.server_host, global_config.server_port) as server:
         logger.info(f"Adapter已启动，监听地址: ws://{global_config.server_host}:{global_config.server_port}")
         await server.serve_forever()
+
+
+async def start_health_reporter():
+    import uvicorn
+    config = uvicorn.Config(health_reporter, host="0.0.0.0", port=3000, loop="asyncio")
+    server = uvicorn.Server(config)
+    await server.serve()
 
 
 async def graceful_shutdown():
@@ -64,9 +77,6 @@ async def graceful_shutdown():
 
 
 if __name__ == "__main__":
-    import uvicorn
-    from src.recv_handler import app
-    uvicorn.run(app, host="0.0.0.0", port=80)
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
