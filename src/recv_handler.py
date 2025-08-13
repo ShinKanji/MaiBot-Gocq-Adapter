@@ -70,7 +70,7 @@ class RecvHandler:
                 logger.debug("心跳正常")
             await asyncio.sleep(self.interval)
 
-    async def check_allow_to_chat(
+    def check_allow_to_chat(
         self,
         user_id: int,
         group_id: Optional[int] = None,
