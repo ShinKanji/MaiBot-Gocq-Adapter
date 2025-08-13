@@ -110,7 +110,7 @@ class RecvHandler:
 
         if global_config.chat.ban_qq_bot and group_id and not ignore_bot:
             logger.debug("开始判断是否为机器人")
-            member_info = await get_member_info(self.server_connection, group_id, user_id)
+            member_info = get_member_info(self.server_connection, group_id, user_id)
             if member_info:
                 is_bot = member_info.get("is_robot")
                 if is_bot is None:
